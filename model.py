@@ -159,59 +159,6 @@ def CMDAF(F_vi, F_ir):
 
     return F_fvi, F_fir
 
-# class DFA(nn.Module):
-#     def __init__(self, out_dim):
-#         super(DFA, self).__init__()
-#         self.sigmoid = nn.Sigmoid()
-#         self.conv = nn.Conv1d(1, 1, kernel_size=3, padding=(3 - 1) // 2, bias=False)
-#         self.bn = nn.BatchNorm2d(out_dim * 2)
-#         self.vi_attn=nn.Sequential(
-#             nn.Conv2d(out_dim, out_dim, kernel_size=3, padding=1, bias=False),
-#             nn.BatchNorm2d(out_dim),
-#             nn.ReLU(inplace=True),
-#             nn.Conv2d(out_dim, out_dim, kernel_size=1, bias=False),
-#             nn.Sigmoid()
-#         )
-#         self.ir_attn=nn.Sequential(
-#             nn.Conv2d(out_dim, out_dim, kernel_size=3, padding=1, bias=False),
-#             nn.BatchNorm2d(out_dim),
-#             nn.ReLU(inplace=True),
-#             nn.Conv2d(out_dim, out_dim, kernel_size=1, bias=False),
-#             nn.Sigmoid()
-#         )
-#         self.conv_final = nn.Conv2d(out_dim*2, out_dim, kernel_size=1)
-#     def forward(self, x):
-#         vi, ir = x.chunk(2, dim=1)
-#         vi_enhance = vi*(1+self.ir_attn(vi))
-#         ir_enhance = ir*(1+self.vi_attn(ir))
-#         sub_vi_ir = F.relu(vi_enhance - ir_enhance)
-#         sub_ir_vi = F.relu(ir_enhance - vi_enhance)
-#
-#         # 全局平均池化 + Sigmoid生成权重
-#         sub_w_vi_ir = torch.mean(sub_vi_ir, dim=[2, 3], keepdim=True)  # B x C x 1 x 1
-#         w_vi_ir = torch.sigmoid(sub_w_vi_ir)
-#
-#         sub_w_ir_vi = torch.mean(sub_ir_vi, dim=[2, 3], keepdim=True)
-#         w_ir_vi = torch.sigmoid(sub_w_ir_vi)
-#
-#         # 局部自适应缩放
-#         scale_factor_vi = self.sigmoid(self.conv((F.adaptive_avg_pool2d(w_ir_vi, (1, 1))).squeeze(-1)
-#                                                  .transpose(-1, -2)).transpose(-1, -2).unsqueeze(-1)).expand_as(w_ir_vi)
-#         scale_factor_ir = self.sigmoid(self.conv((F.adaptive_avg_pool2d(w_vi_ir, (1, 1))).squeeze(-1)
-#                                                  .transpose(-1, -2)).transpose(-1, -2).unsqueeze(-1)).expand_as(w_vi_ir)
-#         F_dvi = sub_vi_ir * scale_factor_vi
-#         F_dir = sub_ir_vi * scale_factor_ir
-#
-#         # 特征融合
-#         F_fvi = vi + F_dvi
-#         F_fir = vi + F_dir
-#
-#         F_shallow = torch.cat((F_fvi, F_fir), dim=1)
-#
-#         F_shallow = self.conv_final(F_shallow)
-#
-#         return F_shallow
-
 class DFA(nn.Module):
     def __init__(self, out_dim):
         super(DFA, self).__init__()
@@ -668,28 +615,6 @@ class HighFreqBranch(nn.Module):
         detail_weight = self.detail_enhance(high_freq)
         enhanced_detail = high_freq * detail_weight
         return self.contrast(x + enhanced_detail)  # 残差增强
-
-# class HighFreqBranch(nn.Module):
-#     def __init__(self, channels):
-#         super(HighFreqBranch, self).__init__()
-#         # Laplacian 卷积核（每通道分别处理）
-#         self.laplace = nn.Conv2d(
-#             channels, channels, kernel_size=3, padding=1,
-#             bias=False, groups=channels  # 每通道单独卷积
-#         )
-#         lap_kernel = torch.tensor([[0, -1, 0],
-#                                    [-1, 4, -1],
-#                                    [0, -1, 0]], dtype=torch.float32)
-#         lap_kernel = lap_kernel.view(1, 1, 3, 3).repeat(channels, 1, 1, 1)
-#         self.laplace.weight.data = lap_kernel
-#         self.laplace.weight.requires_grad = False  # 不训练，固定边缘提取
-#
-#         # 增加对比度调整
-#         self.contrast = nn.Conv2d(channels, channels, 1)
-#     def forward(self, x):
-#         high_freq = self.laplace(x)
-#         return self.contrast(x + high_freq)  # 残差增强
-
 
 class MTEFuse_Decoder(nn.Module):
     def __init__(self):
